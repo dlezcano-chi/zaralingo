@@ -3,24 +3,37 @@ import { createToken, json } from '../_shared/auth.js';
 export async function onRequestPost(context) {
   try {
     const { request, env } = context;
-    const body = await request.json();
-    const { user, password } = body;
+    const body = await request.json().catch(() => ({}));
+    
+    // Admite tanto 'user'/'password' como 'username'/'pass' por si app.js los manda así
+    const inputUser = (body.user || body.username || '').toString().trim();
+    const inputPass = (body.password || body.pass || '').toString().trim();
 
-    const adminUser = env.ADMIN_USER;
-    const adminPass = env.ADMIN_PASS;
+    // Obtener variables de entorno
+    const adminUser = (env.ADMIN_USER || '').toString().trim();
+    const adminPass = (env.ADMIN_PASS || '').toString().trim();
     const adminSecret = env.ADMIN_SECRET;
 
+    // Validación de variables en el servidor
     if (!adminUser || !adminPass || !adminSecret) {
-      return json({ error: 'Configuración de servidor incompleta en Cloudflare.' }, 500);
+      return json({ 
+        error: 'Las variables ADMIN_USER, ADMIN_PASS o ADMIN_SECRET no están definidas en Cloudflare.' 
+      }, 500);
     }
 
-    if (user === adminUser && password === adminPass) {
-      const token = await createToken(user, adminSecret);
+    // Comprobación de credenciales
+    if (inputUser === adminUser && inputPass === adminPass) {
+      const token = await createToken(inputUser, adminSecret);
       return json({ success: true, token });
     }
 
-    return json({ error: 'Usuario o contraseña incorrectos.' }, 401);
+    // Si falla, devuelve un mensaje claro para diagnóstico
+    return json({ 
+      error: 'Credenciales no coinciden con las variables de Cloudflare.',
+      receivedUser: inputUser 
+    }, 401);
+
   } catch (err) {
-    return json({ error: 'Error interno en el servidor.' }, 500);
+    return json({ error: 'Error interno en el servidor de autenticación.' }, 500);
   }
 }
