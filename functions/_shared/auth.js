@@ -1,9 +1,23 @@
-// Genera un token firmado HMAC-SHA256
+export function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
+
+export function getBearerToken(request) {
+  const auth = request.headers.get('Authorization') || '';
+  if (auth.startsWith('Bearer ')) {
+    return auth.substring(7).trim();
+  }
+  return null;
+}
+
 export async function createToken(username, secret) {
   const encoder = new TextEncoder();
   const payload = JSON.stringify({
     sub: username,
-    exp: Date.now() + 8 * 60 * 60 * 1000 // Expira en 8 horas
+    exp: Date.now() + 8 * 60 * 60 * 1000
   });
 
   const key = await crypto.subtle.importKey(
@@ -21,8 +35,7 @@ export async function createToken(username, secret) {
   return `${b64Payload}.${b64Signature}`;
 }
 
-// Verifica el token firmado
-export async function verifyToken(token, secret) {
+export async function verifySessionToken(token, secret) {
   if (!token || !token.includes('.')) return false;
 
   try {
@@ -46,4 +59,8 @@ export async function verifyToken(token, secret) {
   } catch (err) {
     return false;
   }
+}
+
+export async function verifyToken(token, secret) {
+  return verifySessionToken(token, secret);
 }
