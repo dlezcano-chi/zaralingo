@@ -1,16 +1,49 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
- <meta charset="utf-8" />
- <meta name="viewport" content="width=device-width, initial-scale=1" />
- <title>Zaralingo A2</title>
- <meta name="description" content="Zaralingo: práctica de chino (A2)" />
- <meta name="theme-color" content="#4F46E5" />
- <link rel="stylesheet" href="/styles.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zaralingo A2</title>
+  <meta name="description" content="Zaralingo: práctica de chino (A2)" />
+  <meta name="theme-color" content="#4F46E5" />
+  <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
- <div id="app"></div>
- <script src="/app.js" defer></script>
+
+  <!-- Contenedor principal de la aplicación -->
+  <div id="app"></div>
+
+  <!-- Sección de Autenticación de Alumnos -->
+  <div id="student-auth-section" class="auth-container">
+    <div class="auth-card">
+      <h2 id="auth-title">Acceso Alumnos</h2>
+      
+      <div class="auth-tabs">
+        <button type="button" id="tab-login" class="active" onclick="switchAuthTab('login')">Iniciar Sesión</button>
+        <button type="button" id="tab-register" onclick="switchAuthTab('register')">Registrarse</button>
+      </div>
+
+      <form id="student-auth-form" onsubmit="handleStudentAuth(event)">
+        <input type="hidden" id="auth-action" value="login">
+        
+        <div class="form-group">
+          <label for="student-user">Nombre de Usuario</label>
+          <input type="text" id="student-user" required placeholder="Ej. maricarmen" autocomplete="username">
+        </div>
+        
+        <div class="form-group">
+          <label for="student-pass">Contraseña</label>
+          <input type="password" id="student-pass" required placeholder="••••••••" autocomplete="current-password">
+        </div>
+
+        <button type="submit" id="auth-submit-btn" class="btn-primary">Entrar</button>
+      </form>
+      
+      <p id="auth-message" class="error-message"></p>
+    </div>
+  </div>
+
+  <!-- Script principal JS cargado al final -->
+  <script src="/app.js" defer></script>
 </body>
 </html>

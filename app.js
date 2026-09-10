@@ -233,4 +233,82 @@ function parejasUI(){ const items=state.temaActual?.vocabulario||[]; if(items.le
 
 // ========= 3) Gramática =========
 function gramaticaUI(modo){ if(modo!=='ordenar') return emptyUI('Modo de gramática desconocido'); let items=shuffle(state.temaActual?.gramatica||[]); const useLen = Number.isFinite(state.session.len)? Math.min(state.session.len, items.length) : items.length; items=items.slice(0,useLen); if(!items.length) return emptyUI('No hay ejercicios de gramática'); let idx=0; let aciertos=0, errores=0; const cont=h('div',{class:'container'}); const feedback=h('div',{class:'feedback'}); function fin(){ if(state.session.infinite){ idx=0; items=shuffle(state.temaActual?.gramatica||[]); items=items.slice(0, items.length); renderStep(); return; } cont.innerHTML=''; cont.appendChild(h('h2',{},'Informe de sesión')); cont.appendChild(h('div',{class:'report'},`✔️ Aciertos: ${aciertos} · ❌ Errores: ${errores}`)); cont.appendChild(h('button',{class:'button',onClick:()=>render()},'Volver')); } function renderStep(){ if(idx>=items.length) return fin(); const it=items[idx++]; cont.innerHTML=''; feedback.textContent=''; feedback.className='feedback'; cont.appendChild(h('h2',{},'Ordenar palabras')); cont.appendChild(h('p',{},'Frase en español: '+it.es)); const tokens=it.tokens.slice(); const correct=tokens.slice(); const poolItems=shuffle(tokens.map((tk,ix)=>({text:tk,id:ix}))); const builder=h('div',{id:'sentence-builder'}); const pool=h('div',{class:'grid'}); const chosen=[]; function addToBuilder(itm){ if(chosen.includes(itm.id)) return; chosen.push(itm.id); const sp=h('span',{class:'token selected', onClick:()=>{ const ix=chosen.indexOf(itm.id); if(ix>-1){ chosen.splice(ix,1); sp.remove(); const poolBtn=pool.querySelector(`[data-id="${itm.id}"]`); if(poolBtn) poolBtn.className='token'; } }}, itm.text); builder.appendChild(sp); const pb=pool.querySelector(`[data-id="${itm.id}"]`); if(pb) pb.className='token selected'; } poolItems.forEach(itm=>{ const btn=h('button',{class:'token','data-id':String(itm.id), onClick:()=>{ if(chosen.includes(itm.id)){ const ix=chosen.indexOf(itm.id); if(ix>-1) chosen.splice(ix,1); const spans=[...builder.querySelectorAll('.token.selected')]; const sp=spans.find(s=>s.textContent===itm.text); if(sp) sp.remove(); btn.className='token'; } else { addToBuilder(itm); } }}, itm.text); pool.appendChild(btn); }); cont.appendChild(pool); cont.appendChild(h('div',{class:'section-title'},'Tu frase:')); cont.appendChild(builder); const acciones=h('div',{style:'margin-top:12px'},[ h('button',{class:'button',onClick:()=>{ const chosenTexts=chosen.map(id=>tokens[id]); if(arraysEqual(chosenTexts, correct)){ aciertos++; feedback.className='feedback ok'; feedback.textContent='✔️ ¡Correcto!'; setTimeout(renderStep,450); } else { errores++; feedback.className='feedback err'; feedback.textContent='❌ Comprueba el orden'; } }}, 'Comprobar'), h('button',{class:'button ghost',onClick:()=>{ renderStep(); }}, 'Siguiente'), h('button',{class:'button ghost',onClick:()=>render()}, 'Volver') ]); cont.appendChild(feedback); cont.appendChild(acciones); } renderStep(); return h('div',{},[header(),cont]); }
+// Cambiar entre pestañas de Login y Registro
+function switchAuthTab(action) {
+  document.getElementById('auth-action').value = action;
+  document.getElementById('auth-message').textContent = '';
+  
+  const tabLogin = document.getElementById('tab-login');
+  const tabRegister = document.getElementById('tab-register');
+  const submitBtn = document.getElementById('auth-submit-btn');
+  const title = document.getElementById('auth-title');
+
+  if (action === 'register') {
+    tabLogin.classList.remove('active');
+    tabRegister.classList.add('active');
+    submitBtn.textContent = 'Crear Cuenta';
+    title.textContent = 'Registro de Alumnos';
+  } else {
+    tabRegister.classList.remove('active');
+    tabLogin.classList.add('active');
+    submitBtn.textContent = 'Entrar';
+    title.textContent = 'Acceso Alumnos';
+  }
+}
+
+// Manejar la autenticación (Login / Registro)
+async function handleStudentAuth(event) {
+  event.preventDefault();
+  
+  const action = document.getElementById('auth-action').value;
+  const username = document.getElementById('student-user').value;
+  const password = document.getElementById('student-pass').value;
+  const msgElement = document.getElementById('auth-message');
+  
+  msgElement.textContent = 'Procesando...';
+  msgElement.style.color = '#555';
+
+  try {
+    const response = await fetch('/api/auth/student', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, username, password })
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      // Guardar datos de la sesión del alumno
+      localStorage.setItem('student_token', data.token);
+      localStorage.setItem('student_user', data.username);
+      localStorage.setItem('student_coins', data.coins || 0);
+
+      msgElement.style.color = 'green';
+      msgElement.textContent = action === 'register' ? '¡Cuenta creada con éxito!' : '¡Bienvenido!';
+
+      // Ocultar formulario de auth y cargar la aplicación para el alumno
+      setTimeout(() => {
+        document.getElementById('student-auth-section').style.display = 'none';
+        initStudentDashboard(data);
+      }, 1000);
+
+    } else {
+      msgElement.style.color = 'red';
+      msgElement.textContent = data.error || 'Error en la autenticación';
+    }
+  } catch (err) {
+    msgElement.style.color = 'red';
+    msgElement.textContent = 'Error de conexión con el servidor.';
+  }
+}
+
+// Inicializar la interfaz una vez iniciada la sesión del alumno
+function initStudentDashboard(studentData) {
+  console.log('Sesión activa para el alumno:', studentData.username);
+  // Aquí mostraremos el nombre del alumno y sus monedas en la barra superior
+  const userHeader = document.getElementById('user-info-header');
+  if (userHeader) {
+    userHeader.innerHTML = `👤 <strong>${studentData.username}</strong> | 🪙 <span id="user-coins">${studentData.coins}</span> monedas`;
+  }
+}
 
