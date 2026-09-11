@@ -182,6 +182,9 @@ function h(tag,props={},children=[]){const el=document.createElement(tag);for(co
 function mount(n){const app=document.getElementById('app');app.innerHTML='';app.appendChild(n)}
 function header(){const adminLabel=state.adminAuth?'⚙ Panel admin':'⚙ Admin';const adminLink=h('span',{class:'admin-link',onClick:()=>{location.hash='#admin';route();}},adminLabel);return h('div',{class:'header container'},[h('div',{class:'logo'},'Za'),h('div',{style:'flex:1'},[h('h1',{},'Zaralingo')]),adminLink])}
 
+// Ejemplo de llamada al terminar la lección 'A2-L1' con 8 aciertos de 10
+saveLessonResults('A2-L1', aciertos, totalPreguntas);
+
 function home(){const tipos=h('div',{class:'grid'},[
   tipoCard('Práctica de Caracteres','caracteres',[submodoRadio('caracteres','hanzi_pinyin','Hanzi → pinyin'),submodoRadio('caracteres','pinyin_hanzi','Pinyin → hanzi')]),
   tipoCard('Práctica de Vocabulario','vocabulario',[submodoRadio('vocabulario','huecos','Rellenar huecos'),submodoRadio('vocabulario','parejas','Enlazar palabras')]),
@@ -281,6 +284,7 @@ async function handleStudentAuth(event) {
       // Guardar datos de la sesión del alumno
       localStorage.setItem('student_token', data.token);
       localStorage.setItem('student_user', data.username);
+      localStorage.setItem('student_user_id', data.userId);
       localStorage.setItem('student_coins', data.coins || 0);
 
       msgElement.style.color = 'green';
@@ -309,6 +313,48 @@ function initStudentDashboard(studentData) {
   const userHeader = document.getElementById('user-info-header');
   if (userHeader) {
     userHeader.innerHTML = `👤 <strong>${studentData.username}</strong> | 🪙 <span id="user-coins">${studentData.coins}</span> monedas`;
+  }
+}
+// Enviar resultados de la lección al servidor D1
+async function saveLessonResults(lessonId, score, totalQuestions) {
+  const token = localStorage.getItem('student_token');
+  const userId = localStorage.getItem('student_user_id'); // Asegúrate de guardar el ID al hacer login
+
+  // Si no hay alumno logueado, no enviamos nada
+  if (!token || !userId) return;
+
+  // Calculamos las monedas ganadas (ejemplo: 1 moneda por cada acierto)
+  const coinsEarned = score; 
+
+  try {
+    const response = await fetch('/api/stats/submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        userId: parseInt(userId, 10),
+        lessonId: lessonId,
+        score: score,
+        totalQuestions: totalQuestions,
+        coinsEarned: coinsEarned
+      })
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      // Actualizamos las monedas en la pantalla del alumno sin recargar
+      localStorage.setItem('student_coins', data.newCoins);
+      const coinsDisplay = document.getElementById('user-coins');
+      if (coinsDisplay) {
+        coinsDisplay.textContent = data.newCoins;
+      }
+      console.log('¡Progreso y monedas guardados en la nube!');
+    }
+  } catch (err) {
+    console.error('Error al guardar el progreso:', err);
   }
 }
 
